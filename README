@@ -1,3 +1,5 @@
+在v2.0.0的基础上创建了comments分支，该分支上提交读源码时的注释。
+
 Muduo is a multithreaded C++ network library based on
 the reactor pattern.
 

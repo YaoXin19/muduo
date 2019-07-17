@@ -22,7 +22,7 @@ namespace muduo
 ///
 class Timestamp : public muduo::copyable,
                   public boost::equality_comparable<Timestamp>,
-                  public boost::less_than_comparable<Timestamp>
+                  public boost::less_than_comparable<Timestamp> // 模板元编程:要求实现<, 可自动实现>,<=,>=
 {
  public:
   ///
