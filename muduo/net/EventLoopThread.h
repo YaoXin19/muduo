@@ -22,6 +22,9 @@ namespace net
 
 class EventLoop;
 
+// 创建一个线程，并创建EvenLoop并调用EventLoop::loop
+// WebRTC是将这两步整体封装到了Thread中
+
 class EventLoopThread : noncopyable
 {
  public:
@@ -30,17 +33,17 @@ class EventLoopThread : noncopyable
   EventLoopThread(const ThreadInitCallback& cb = ThreadInitCallback(),
                   const string& name = string());
   ~EventLoopThread();
-  EventLoop* startLoop();
+  EventLoop* startLoop(); // 启动线程，该线程就成为了IO线程
 
  private:
-  void threadFunc();
+  void threadFunc(); // 线程函数
 
   EventLoop* loop_ GUARDED_BY(mutex_);
   bool exiting_;
   Thread thread_;
   MutexLock mutex_;
-  Condition cond_ GUARDED_BY(mutex_);
-  ThreadInitCallback callback_;
+  Condition cond_ GUARDED_BY(mutex_); // 条件变量
+  ThreadInitCallback callback_; // 回调函数再EventLoop::loop事件循环之前被调用
 };
 
 }  // namespace net

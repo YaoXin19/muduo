@@ -18,7 +18,7 @@ using namespace muduo;
 using namespace muduo::net;
 
 const int Channel::kNoneEvent = 0;
-const int Channel::kReadEvent = POLLIN | POLLPRI;
+const int Channel::kReadEvent = POLLIN | POLLPRI; // POLLPRI紧急数据
 const int Channel::kWriteEvent = POLLOUT;
 
 Channel::Channel(EventLoop* loop, int fd__)
@@ -80,7 +80,7 @@ void Channel::handleEvent(Timestamp receiveTime)
   }
 }
 
-void Channel::handleEventWithGuard(Timestamp receiveTime)
+void Channel::handleEventWithGuard(Timestamp receiveTime) // 处理Poller返回的事件
 {
   eventHandling_ = true;
   LOG_TRACE << reventsToString();
@@ -93,7 +93,7 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
     if (closeCallback_) closeCallback_();
   }
 
-  if (revents_ & POLLNVAL)
+  if (revents_ & POLLNVAL) 
   {
     LOG_WARN << "fd = " << fd_ << " Channel::handle_event() POLLNVAL";
   }

@@ -32,6 +32,13 @@ class Channel;
 class Poller;
 class TimerQueue;
 
+/*
+  1. one loop per thread指每个线程最多只能由一个EventLoop对象
+  2. EventLoop对象构造的收，会检查当前线程是否已经创建了其他EventLoop对象，如果已创建，终止程序
+  3， 创建了EventLoop对象的线程称为IO线程，其功能是运行事件循环(与webrtc中的Thread和SocketServer是一个意思的)
+ */
+
+
 ///
 /// Reactor, at most one per thread.
 ///
@@ -101,8 +108,8 @@ class EventLoop : noncopyable
 
   // internal usage
   void wakeup();
-  void updateChannel(Channel* channel);
-  void removeChannel(Channel* channel);
+  void updateChannel(Channel* channel); // 在Poller中添加或者更新通道， 由具体的Channel调用
+  void removeChannel(Channel* channel); // 在Poller中移除通道
   bool hasChannel(Channel* channel);
 
   // pid_t threadId() const { return threadId_; }
@@ -137,24 +144,24 @@ class EventLoop : noncopyable
 
   typedef std::vector<Channel*> ChannelList;
 
-  bool looping_; /* atomic */
-  std::atomic<bool> quit_;
-  bool eventHandling_; /* atomic */
+  bool looping_; /* atomic */ // 是否处于循环中
+  std::atomic<bool> quit_; // 是否退出循环
+  bool eventHandling_; /* atomic */ // 是否处于事件处理状态
   bool callingPendingFunctors_; /* atomic */
   int64_t iteration_;
-  const pid_t threadId_;
-  Timestamp pollReturnTime_;
-  std::unique_ptr<Poller> poller_;
+  const pid_t threadId_; // 当前对象所属线程ID
+  Timestamp pollReturnTime_; // 调用poll()返回的时间
+  std::unique_ptr<Poller> poller_; // Poller的生存周期由EventLoop控制
   std::unique_ptr<TimerQueue> timerQueue_;
-  int wakeupFd_;
+  int wakeupFd_; // 用于eventfd，唤醒poller阻塞的线程
   // unlike in TimerQueue, which is an internal class,
   // we don't expose Channel to client.
-  std::unique_ptr<Channel> wakeupChannel_;
+  std::unique_ptr<Channel> wakeupChannel_; // wakeupFd_对应的通道, Eventloop负责该Channel的生存期
   boost::any context_;
 
   // scratch variables
-  ChannelList activeChannels_;
-  Channel* currentActiveChannel_;
+  ChannelList activeChannels_; // Poller返回的活动通道
+  Channel* currentActiveChannel_; // 当前正在处理的活动通道
 
   mutable MutexLock mutex_;
   std::vector<Functor> pendingFunctors_ GUARDED_BY(mutex_);

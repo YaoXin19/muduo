@@ -17,6 +17,7 @@ namespace muduo
 {
 namespace net
 {
+    // 对socket相关的系统调用进行封装
 namespace sockets
 {
 

@@ -18,6 +18,8 @@ namespace muduo
 {
 namespace net
 {
+
+  // 封装了字节序转换相关函数
 namespace sockets
 {
 
@@ -33,7 +35,7 @@ inline uint64_t hostToNetwork64(uint64_t host64)
 
 inline uint32_t hostToNetwork32(uint32_t host32)
 {
-  return htobe32(host32);
+  return htobe32(host32); // 没有使用htonl
 }
 
 inline uint16_t hostToNetwork16(uint16_t host16)

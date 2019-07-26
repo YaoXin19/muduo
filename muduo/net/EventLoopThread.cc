@@ -44,7 +44,7 @@ EventLoop* EventLoopThread::startLoop()
   EventLoop* loop = NULL;
   {
     MutexLockGuard lock(mutex_);
-    while (loop_ == NULL)
+    while (loop_ == NULL) // 一直等待threadFunc()直到loop_不为空
     {
       cond_.wait();
     }
@@ -54,7 +54,7 @@ EventLoop* EventLoopThread::startLoop()
   return loop;
 }
 
-void EventLoopThread::threadFunc()
+void EventLoopThread::threadFunc() // 该函数退出，等于该线程退出
 {
   EventLoop loop;
 
@@ -65,7 +65,7 @@ void EventLoopThread::threadFunc()
 
   {
     MutexLockGuard lock(mutex_);
-    loop_ = &loop;
+    loop_ = &loop; // loop_指针指向了一个栈上的对象，threadFunc()退出后，这个指针就失效了
     cond_.notify();
   }
 

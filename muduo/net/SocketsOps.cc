@@ -76,6 +76,7 @@ const struct sockaddr_in6* sockets::sockaddr_in6_cast(const struct sockaddr* add
 
 int sockets::createNonblockingOrDie(sa_family_t family)
 {
+  // VALGRIND是内存检测工具，内存泄漏，文件描述符
 #if VALGRIND
   int sockfd = ::socket(family, SOCK_STREAM, IPPROTO_TCP);
   if (sockfd < 0)

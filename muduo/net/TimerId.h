@@ -20,6 +20,8 @@ namespace net
 
 class Timer;
 
+// 不透明
+
 ///
 /// An opaque identifier, for canceling Timer.
 ///

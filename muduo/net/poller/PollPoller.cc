@@ -65,18 +65,18 @@ void PollPoller::fillActiveChannels(int numEvents,
       assert(ch != channels_.end());
       Channel* channel = ch->second;
       assert(channel->fd() == pfd->fd);
-      channel->set_revents(pfd->revents);
+      channel->set_revents(pfd->revents); // 将活动事件返回给对应的channel
       // pfd->revents = 0;
       activeChannels->push_back(channel);
     }
   }
 }
 
-void PollPoller::updateChannel(Channel* channel)
+void PollPoller::updateChannel(Channel* channel) // Channel::update/EventLoop::update
 {
   Poller::assertInLoopThread();
   LOG_TRACE << "fd = " << channel->fd() << " events = " << channel->events();
-  if (channel->index() < 0)
+  if (channel->index() < 0) // 新的channel
   {
     // a new one, add to pollfds_
     assert(channels_.find(channel->fd()) == channels_.end());
@@ -101,7 +101,7 @@ void PollPoller::updateChannel(Channel* channel)
     pfd.fd = channel->fd();
     pfd.events = static_cast<short>(channel->events());
     pfd.revents = 0;
-    if (channel->isNoneEvent())
+    if (channel->isNoneEvent()) // 将一个通道暂时更改为不关注事件，但不从Poller中移除该通道
     {
       // ignore this pollfd
       pfd.fd = -channel->fd()-1;

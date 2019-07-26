@@ -26,7 +26,7 @@ using namespace muduo::net;
 
 namespace
 {
-__thread EventLoop* t_loopInThisThread = 0;
+__thread EventLoop* t_loopInThisThread = 0; // 线程局部存储
 
 const int kPollTimeMs = 10000;
 
@@ -62,20 +62,20 @@ EventLoop* EventLoop::getEventLoopOfCurrentThread()
 }
 
 EventLoop::EventLoop()
-  : looping_(false),
+  : looping_(false), // 对象创建时不处于循环中
     quit_(false),
     eventHandling_(false),
     callingPendingFunctors_(false),
     iteration_(0),
-    threadId_(CurrentThread::tid()),
-    poller_(Poller::newDefaultPoller(this)),
+    threadId_(CurrentThread::tid()), // 记录本对象所属线程
+    poller_(Poller::newDefaultPoller(this)), // 默认使用epoll
     timerQueue_(new TimerQueue(this)),
     wakeupFd_(createEventfd()),
     wakeupChannel_(new Channel(this, wakeupFd_)),
     currentActiveChannel_(NULL)
 {
   LOG_DEBUG << "EventLoop created " << this << " in thread " << threadId_;
-  if (t_loopInThisThread)
+  if (t_loopInThisThread) // 如果已经创建，则终止程序
   {
     LOG_FATAL << "Another EventLoop " << t_loopInThisThread
               << " exists in this thread " << threadId_;
@@ -100,10 +100,10 @@ EventLoop::~EventLoop()
   t_loopInThisThread = NULL;
 }
 
-void EventLoop::loop()
+void EventLoop::loop() // 事件循环
 {
   assert(!looping_);
-  assertInLoopThread();
+  assertInLoopThread(); // 只能在创建该对象的线程中调用
   looping_ = true;
   quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
   LOG_TRACE << "EventLoop " << this << " start looping";
@@ -111,7 +111,7 @@ void EventLoop::loop()
   while (!quit_)
   {
     activeChannels_.clear();
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
+    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_); // 从Poller中返回所有活动的通道,10s超时
     ++iteration_;
     if (Logger::logLevel() <= Logger::TRACE)
     {
@@ -119,29 +119,29 @@ void EventLoop::loop()
     }
     // TODO sort channel by priority
     eventHandling_ = true;
-    for (Channel* channel : activeChannels_)
+    for (Channel* channel : activeChannels_) // 处理活动通道
     {
       currentActiveChannel_ = channel;
-      currentActiveChannel_->handleEvent(pollReturnTime_);
+      currentActiveChannel_->handleEvent(pollReturnTime_); // 处理活动通道
     }
     currentActiveChannel_ = NULL;
     eventHandling_ = false;
-    doPendingFunctors();
+    doPendingFunctors(); // 执行其他线程添加到IO线程的任务，即IO线程可以处理IO事件和做其他计算，这个设计思路和WebRTC中的线程是一致的
   }
 
   LOG_TRACE << "EventLoop " << this << " stop looping";
   looping_ = false;
 }
 
-void EventLoop::quit()
+void EventLoop::quit() // 可以跨线程调用，不一定在IO线程中调用
 {
-  quit_ = true;
+  quit_ = true; // 多个线程都可能访问该变量，bool在linux下是原子变量，不需要保护
   // There is a chance that loop() just executes while(!quit_) and exits,
   // then EventLoop destructs, then we are accessing an invalid object.
   // Can be fixed using mutex_ in both places.
   if (!isInLoopThread())
   {
-    wakeup();
+    wakeup(); // 不再IO线程中调用，有可能阻塞在poll，需要唤醒该IO线程
   }
 }
 
@@ -256,6 +256,7 @@ void EventLoop::doPendingFunctors()
   std::vector<Functor> functors;
   callingPendingFunctors_ = true;
 
+  // 非常好的设计：1.减小临界区；2.避免functor里再调用queueInLoop，造成死锁
   {
   MutexLockGuard lock(mutex_);
   functors.swap(pendingFunctors_);
